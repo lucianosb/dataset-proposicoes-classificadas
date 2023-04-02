@@ -1,3 +1,8 @@
+# Arquivos gerados pelo dataset
+proposicoes/proposicoes*
+temas/proposicoesTemas*
+*.csv
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
