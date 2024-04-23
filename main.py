@@ -76,17 +76,20 @@ def join_proposicoes_temas(anoInicial, anoFinal):
 
 
 def get_inteiro_teor(anoInicial, anoFinal):
-    """Retorna o inteiro teor das proposições"""
+    """Retorna o inteiro teor das proposições em uma janela de streaming"""
     
     df = join_proposicoes_temas(anoInicial, anoFinal)
 
     print('Obtendo Inteiro Teor...')
 
-    # Add a new column 'inteiro_teor' to the DataFrame with empty strings
-    df['inteiro_teor'] = ''
+    # Create a new CSV file and write the header
+    filename = 'proposicoes_inteiroteor_'+str(anoInicial)+'_'+str(anoFinal-1)+'.csv'
+    csvfile = open(os.path.join(filename), 'w', newline='', encoding="utf8")
+    writer = csv.writer(csvfile)
+    writer.writerow(df.columns.tolist() + ['inteiro_teor'])
 
-    # Iterate through the column 'urlInteiroTeor' and download the PDFs
-    for _, row in tqdm(df[:100].iterrows()):
+    # Iterate through the column 'urlInteiroTeor' and download the PDFs, streaming to the CSV file
+    for _, row in tqdm(df.iterrows()):
         url = row['urlInteiroTeor']
         if pd.notna(url):
             try:
@@ -97,25 +100,27 @@ def get_inteiro_teor(anoInicial, anoFinal):
                 # Load the PDF into a PdfReader object
                 pdf = PdfReader(BytesIO(response.content))
 
-                # Extract the text from the PDF
-                text = ""
+                # Extract the text from the PDF, streaming to the CSV file
                 for page in range(len(pdf.pages)):
                     page_text = pdf.pages[page].extract_text()
-                    text += page_text
-
-                # Append the text to the 'inteiro_teor' column
-                df.at[row.name, 'inteiro_teor'] = text
+                    row_values = row.tolist() + [page_text]
+                    writer.writerow(row_values)
 
             except Exception as e:
                 print(f"An error occurred with URL {url}: {e}")
-    
-    return df
+
+    # Close the CSV file
+    csvfile.close()
+    print('CSV created.')
+    return
+
 
 
 def make_csv(df, anoInicial, anoFinal):
     """Exporta um CSV com o resultado final"""
     print('Exportando CSV...')
     df.to_csv('proposicoes_inteiroteor_'+str(anoInicial)+'_'+str(anoFinal-1)+'.csv', index=False)
+
 
 def main(anoInicial, anoFinal):
     """
@@ -126,7 +131,6 @@ def main(anoInicial, anoFinal):
     get_proposicoes(anoInicial, anoFinal)
     get_temas(anoInicial, anoFinal)
     df = get_inteiro_teor(anoInicial, anoFinal)
-    make_csv(df, anoInicial, anoFinal)
     end_time = time.time()
     elapsed_time = end_time - start_time
     print(f'Extração do dataset concluída em {elapsed_time/60} minutos.')
